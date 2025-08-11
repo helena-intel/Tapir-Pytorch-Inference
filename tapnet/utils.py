@@ -146,8 +146,11 @@ def convert_grid_coordinates(
     return position_in_grid
 
 
-def preprocess_frame(frame, resize=(256, 256), device='cuda'):
-    input = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+def preprocess_frame(frame, resize=(480, 480), device='cpu'):
+    is_torch = isinstance(frame, torch.Tensor)
+    if is_torch:
+        frame = frame.numpy()
+    input = frame[:,:,::-1]
     input = cv2.resize(input, resize)
     input = input[np.newaxis, :, :, :].astype(np.float32)
 
@@ -156,7 +159,7 @@ def preprocess_frame(frame, resize=(256, 256), device='cuda'):
     input = input / 255 * 2 - 1
     input = input.permute(0, 3, 1, 2)
 
-    return input
+    return input if not is_torch else torch.as_tensor(input)
 
 
 def sample_grid_points(height, width, num_points):
@@ -167,6 +170,7 @@ def sample_grid_points(height, width, num_points):
     x = np.expand_dims(x.flatten(), -1)
     y = np.expand_dims(y.flatten(), -1)
     points = np.concatenate((y, x), axis=-1).astype(np.int32)  # [num_points, 2]
+    print("points", points.shape)
     return points
 
 
@@ -221,10 +225,10 @@ def draw_points(frame, points, visible, colors):
 
 
 def draw_tracks(frame, tracks, point_colors, draw_static=False):
-
     draw_image = frame.copy()
 
-    line_thickness = min(draw_image.shape[0], draw_image.shape[1]) // 300
+    line_thickness = min(draw_image.shape[0], draw_image.shape[1]) // 100
+    line_thickness = 10
 
     # At the beginning tracks are all zeros, in the first frame only the first track id is filled, calculate the number of valid tracks
     full_empty = np.all(tracks == 0, axis=0)[:, 1]
@@ -249,4 +253,4 @@ def draw_tracks(frame, tracks, point_colors, draw_static=False):
         for i in range(1, num_valid_tracks):
             cv2.line(draw_image, tuple(track[i - 1].astype(int)), tuple(track[i].astype(int)), color, line_thickness)
 
-    return cv2.addWeighted(draw_image, 0.4, frame, 0.6, 0)
+    return cv2.addWeighted(draw_image, 0.7, frame, 0.3, 0)

@@ -5,3 +5,5 @@ cap_from_youtube
 onnxruntime
 onnx
 onnxsim
+openvino
+nncf

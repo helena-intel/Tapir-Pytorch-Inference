@@ -1,17 +1,20 @@
+"""
+Usage: python __file__ path_to_decoder.xml path_to_encoder.xml
+
+Modify device from GPU to CPU in the script to use CPU
+"""
+
 import cv2
+import sys
 import torch
-import pickle
 import numpy as np
+import pickle
 from cap_from_youtube import cap_from_youtube
 
 import tapnet.utils as utils
-from tapnet.tapir_inference import TapirInference
+from tapnet.tapir_inference import OVTapirInference
 
-# Settings
-input_size = 480
-num_points = 100
-num_iters = 4
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+ov_device = "GPU"
 
 # tapvid_davis dataset: `curl -O "https://storage.googleapis.com/dm-tapnet/tapvid_davis.zip`
 with open("tapvid_davis/tapvid_davis.pkl", "rb") as f:
@@ -21,7 +24,12 @@ video = data["dog"]["video"]
 
 # Initialize model
 model_path = sys.argv[1]
-tapir = TapirInference(model_path, (input_size, input_size), num_iters, device)
+encoder_path = sys.argv[2]
+tapir = OVTapirInference(model_path, encoder_path, ov_device)
+input_size = tapir.input_resolution[0]
+num_points = tapir.num_points
+num_iters = tapir.num_iters
+print(num_points)
 
 # Initialize query features
 query_points = utils.sample_grid_points(input_size, input_size, num_points)
